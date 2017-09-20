@@ -103,7 +103,34 @@ def add_fit_args(parser):
                        help='1 means test reading speed without training')
     train.add_argument('--dtype', type=str, default='float32',
                        help='precision: float32 or float16')
+    train.add_argument('--set-layer-lr-prefix', type=str, default='',
+                       help='the layers needed to set different lr mult')
+    train.add_argument('--lr-mult-factor', type=float, default=1.0,
+                       help='the factor for layers set lr mult')
     return train
+
+def set_lr_mul(args, network):
+    if len(args.set_layer_lr_prefix) <= 0:
+        return dict()
+    internals = network.get_internals()
+    arg_names = internals.list_arguments()
+
+    # set lr for all feature layers
+    lr_dict = dict()
+    for arg_name in arg_names:
+        if arg_name.startswith(args.set_layer_lr_prefix):
+            if arg_name.endswith('weight'):
+                logging.info('Set %s lr_mult as %f', arg_name, args.lr_mult_factor)
+                lr_dict[arg_name] = args.lr_mult_factor
+            elif arg_name.endswith('bias'):
+                logging.info('Set %s lr_mult as %f', arg_name, args.lr_mult_factor * 2)
+                lr_dict[arg_name] = args.lr_mult_factor * 2
+        else:
+            if arg_name.endswith('weight'):
+                lr_dict[arg_name] = 1.0
+            elif arg_name.endswith('bias'):
+                lr_dict[arg_name] = 2.0
+    return lr_dict
 
 def fit(args, network, data_loader, **kwargs):
     """
@@ -196,6 +223,14 @@ def fit(args, network, data_loader, **kwargs):
         cbs = kwargs['batch_end_callback']
         batch_end_callbacks += cbs if isinstance(cbs, list) else [cbs]
 
+    model.bind(data_shapes=train.provide_data, label_shapes=train.provide_label,
+               for_training=True, force_rebind=False)
+    model.init_params(initializer=initializer, arg_params=arg_params,
+                      aux_params=aux_params, allow_missing=True, force_init=False)
+    model.init_optimizer(kvstore=kv, optimizer=args.optimizer,
+                         optimizer_params=optimizer_params)
+    lr_dict = set_lr_mul(args, network)
+    model._optimizer.set_lr_mult(lr_dict)
     # run
     model.fit(train,
         begin_epoch        = args.load_epoch if args.load_epoch else 0,
