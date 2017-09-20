@@ -49,6 +49,8 @@ def score(model, data_val, metrics, gpus, batch_size, rgb_mean=None, mean_img=No
         dir_path = os.path.dirname(os.path.realpath(__file__))
         (prefix, epoch) = modelzoo.download_model(
             model, os.path.join(dir_path, 'model'))
+        if prefix is None:
+            (prefix, epoch) = (model, 0)
         sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
     elif isinstance(model, tuple) or isinstance(model, list):
         assert len(model) == 3
@@ -90,6 +92,7 @@ if __name__ == '__main__':
     parser.add_argument('--rgb-mean', type=str, default='0,0,0')
     parser.add_argument('--data-val', type=str, required=True)
     parser.add_argument('--image-shape', type=str, default='3,224,224')
+    parser.add_argument('--label-name', type=str, default='softmax_label')
     parser.add_argument('--data-nthreads', type=int, default=4,
                         help='number of threads for data decoding')
     args = parser.parse_args()

@@ -49,8 +49,10 @@ if __name__ == "__main__":
                         help='the pre-trained model')
     parser.add_argument('--layer-before-fullc', type=str, default='flatten0',
                         help='the name of the layer before the last fullc layer')
+    parser.add_argument('--reconstruct', type=int, default=1,
+                        help='whether add new classification layer')
     # use less augmentations for fine-tune
-    data.set_data_aug_level(parser, 1)
+    data.set_data_aug_level(parser, 3)
     # use a small learning rate and less regularizations
     parser.set_defaults(image_shape='3,224,224', num_epochs=30,
                         lr=.01, lr_step_epochs='20', wd=0, mom=0)
@@ -65,9 +67,13 @@ if __name__ == "__main__":
         (prefix, epoch) = (args.pretrained_model, args.load_epoch)
     sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
 
-    # remove the last fullc layer
-    (new_sym, new_args) = get_fine_tune_model(
-        sym, arg_params, args.num_classes, args.layer_before_fullc)
+    if args.reconstruct == 1:
+        # remove the last fullc layer
+        (new_sym, new_args) = get_fine_tune_model(
+            sym, arg_params, args.num_classes, args.layer_before_fullc)
+    else:
+        new_sym = sym.get_internals()['softmax_output']
+        new_args = arg_params
 
     # train
     fit.fit(args        = args,

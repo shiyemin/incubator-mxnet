@@ -228,6 +228,13 @@ def _parse_proto(prototxt_fname):
             need_flatten[name] = need_flatten[mapping[layer.bottom[0]]]
             skip_layer = True
             prev_name = re.sub('[-/]', '_', layers[i-1].name)
+        if layer.type == 'Axpy':
+            symbol_string += "%s_mul = mx.symbol.broadcast_mul(name='%s_mul', lhs=%s, rhs=%s)\n" % (
+                    name, name, mapping[layer.bottom[0]], mapping[layer.bottom[1]])
+            symbol_string += "%s = mx.symbol.broadcast_add(name='%s', lhs=%s_mul, rhs=%s)\n" % (
+                    name, name, name, mapping[layer.bottom[2]])
+            type_string = 'split'
+            need_flatten[name] = False
         if layer.type == 'PReLU':
             type_string = 'mx.symbol.LeakyReLU'
             param = layer.prelu_param
@@ -303,6 +310,9 @@ def convert_symbol(prototxt_fname):
         Input shape
     """
     sym, output_name, input_dim = _parse_proto(prototxt_fname)
+    print(sym)
+    with open("tmp_network.py", "w") as f:
+        f.write(sym)
     exec(sym)                   # pylint: disable=exec-used
     _locals = locals()
     ret = []

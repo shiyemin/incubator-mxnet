@@ -138,7 +138,9 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
                 first_conv = False
 
         elif layer_type == 'Scale':
-            if 'scale' in layer_name:
+            if 'bn_scale' in layer_name:
+                bn_name = layer_name.replace('bn_scale', 'bn')
+            elif 'scale' in layer_name:
                 bn_name = layer_name.replace('scale', 'bn')
             elif 'sc' in layer_name:
                 bn_name = layer_name.replace('sc', 'bn')
