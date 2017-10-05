@@ -36,6 +36,10 @@ def add_data_args(parser):
                       help='number of threads for data decoding')
     data.add_argument('--benchmark', type=int, default=0,
                       help='if 1, then feed the network with synthetic data')
+    data.add_argument('--data-scale', type=float, default=1.0,
+                     help='scale the data')
+    data.add_argument('--inter-method', type=int, default=1,
+                      help='inter_method for data resize')
     return data
 
 def add_data_aug_args(parser):
@@ -123,6 +127,7 @@ def get_rec_iter(args, kv=None):
         mean_r              = rgb_mean[0],
         mean_g              = rgb_mean[1],
         mean_b              = rgb_mean[2],
+        scale               = args.data_scale,
         data_name           = 'data',
         label_name          = 'softmax_label',
         data_shape          = image_shape,
@@ -131,6 +136,7 @@ def get_rec_iter(args, kv=None):
         max_random_scale    = args.max_random_scale,
         pad                 = args.pad_size,
         fill_value          = 127,
+        inter_method        = args.inter_method,
         min_random_scale    = args.min_random_scale,
         max_aspect_ratio    = args.max_random_aspect_ratio,
         random_h            = args.max_random_h,
@@ -151,11 +157,13 @@ def get_rec_iter(args, kv=None):
         mean_r              = rgb_mean[0],
         mean_g              = rgb_mean[1],
         mean_b              = rgb_mean[2],
+        scale               = args.data_scale,
         data_name           = 'data',
         label_name          = 'softmax_label',
         batch_size          = args.batch_size,
         data_shape          = image_shape,
         preprocess_threads  = args.data_nthreads,
+        inter_method        = args.inter_method,
         rand_crop           = False,
         rand_mirror         = False,
         num_parts           = nworker,
